@@ -70,15 +70,17 @@ links$row_num <- 1:nrow(links)
 ```
 ```{r}
 #percent_friend <- (12.5/100)
-percent_video <- 62.5
-percent_search <- 14.28
+percent_video <- 50
+percent_search <- 12
+percent_self_training <- 12
 nodes$p_type <- 'Friend'
 
-video_partcipant <- floor((percent_video/100) * nrow(nodes))
+video_partcipant <- ceiling((percent_video/100) * nrow(nodes))
 
-search_partcipant <- floor((percent_search/100) * nrow(nodes))
+search_partcipant <- ceiling((percent_search/100) * nrow(nodes))
+self_training_partcipant <- ceiling((percent_self_training/100) * nrow(nodes))
 
-friend_partcipant <- nrow(nodes) - (video_partcipant+search_partcipant)
+friend_partcipant <- nrow(nodes) - (video_partcipant+search_partcipant+self_training_partcipant)
 
 
 video_p <- sample_n(nodes, video_partcipant)
@@ -98,6 +100,17 @@ search_p <- sample_n(remaining, search_partcipant)
 for (x in 1:nrow(search_p)){
   
   nodes$p_type[nodes$pid == search_p$pid[x]] <- 'Search'
+}
+
+
+
+remaining <- subset(nodes, p_type == 'Friend')
+
+self_p <- sample_n(remaining, self_training_partcipant)
+
+for (x in 1:nrow(self_p)){
+  
+  nodes$p_type[nodes$pid == self_p$pid[x]] <- 'Self-Training'
 }
 ```
 
@@ -169,10 +182,10 @@ for (x in 1:nrow(search_p)){
 
 link_strength_c <- floor(runif(nrow(links), min=1, max=4))
 links$strength <- link_strength_c
-links$strength <- jitter(links$strength)
+links$strength <- jitter(links$strength, amount=.3)
 ```
 
-```{r fig.height= 10, fig.width= 10}
+```{r fig.height= 15, fig.width= 10}
 library(igraph)
 package <- data.frame(
   name = nodes$name,
