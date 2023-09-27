@@ -1,0 +1,217 @@
+---
+title: "social model Interview"
+output:
+  word_document: default
+  html_document: default
+date: "2023-09-26"
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(ggraph)
+library(tidygraph)
+library(babynames)
+library(dplyr)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
+
+```{r}
+
+### LOAD LIBRARIES 
+library(tidyverse)
+library(ggraph)
+library(tidygraph)
+library(babynames)
+
+
+### EXPLORE BABYNAMES STRUCTURE 
+head(babynames)
+
+
+### CREATE NODES TABLE 
+get_random_names <- function(n) { 
+  unique_babynames <- distinct(babynames, name, .keep_all = TRUE) 
+  index <- sample(1:nrow(unique_babynames), n, replace = FALSE) 
+  names <- unique_babynames[index, ] 
+  names 
+}
+
+nodes <- get_random_names(10) #put number of nodes
+nodes$pid <- 1:nrow(nodes)
+
+### CREATE LINKS TABLE 
+# Create source and target vectors 
+src <- sample(1:nrow(nodes), nrow(nodes)*2, replace = TRUE)  
+target <- sample(1:nrow(nodes), nrow(nodes)*2, replace = TRUE)
+
+# Merge vectors to form a single table 
+links <- data.frame(src, target)
+
+# Clean up 
+links <- data.frame(src, target) %>%  
+  filter(!(src == target)) 
+links <- unique(links[c("src", "target")])
+
+
+###creating link_type
+
+# 1 social forum = 42.87
+# 2 friends = 7.14
+# 3 video = 35.71
+# 4 Google = 14.28
+
+links$row_num <- 1:nrow(links)
+#https://stackoverflow.com/questions/15030910/randomly-sample-a-percentage-of-rows-within-a-data-frame
+```
+```{r}
+#percent_friend <- (12.5/100)
+percent_video <- 62.5
+percent_search <- 14.28
+nodes$p_type <- 'Friend'
+
+video_partcipant <- floor((percent_video/100) * nrow(nodes))
+
+search_partcipant <- floor((percent_search/100) * nrow(nodes))
+
+friend_partcipant <- nrow(nodes) - (video_partcipant+search_partcipant)
+
+
+video_p <- sample_n(nodes, video_partcipant)
+
+
+
+for (x in 1:nrow(video_p)){
+  
+  nodes$p_type[nodes$pid == video_p$pid[x]] <- 'Video'
+}
+
+
+remaining <- subset(nodes, p_type == 'Friend')
+
+search_p <- sample_n(remaining, search_partcipant)
+
+for (x in 1:nrow(search_p)){
+  
+  nodes$p_type[nodes$pid == search_p$pid[x]] <- 'Search'
+}
+```
+
+
+<!-- #Friends -->
+<!-- ```{r} -->
+
+<!-- percent <- percent_friend -->
+<!-- temp <- links[ sample( which(links$link_type==0), round(percent*length(which(links$link_type==0)))), ]   -->
+
+<!-- for (x in 1:nrow(temp)) { -->
+<!--   links$link_type[links$row_num == temp$row_num[x]] <- 2 -->
+<!-- } -->
+
+<!-- number_carry <- nrow(temp) -->
+<!-- ``` -->
+<!-- #Video -->
+
+<!-- ```{r} -->
+<!-- percent <- (62.5/100) -->
+<!-- temp <- links[ sample( which(links$link_type==0), round(percent*number_carry + length(which(links$link_type==0)))), ]   -->
+
+<!-- for (x in 1:nrow(temp)) { -->
+<!--   links$link_type[links$row_num == temp$row_num[x]] <- 3 -->
+<!-- } -->
+
+<!-- number_carry <- number_carry +nrow(temp) -->
+<!-- ``` -->
+<!-- #Google Search -->
+
+<!-- ```{r} -->
+<!-- percent <- (14.28/100) -->
+<!-- temp <- links[ sample( which(links$link_type==0), round(percent*number_carry + length(which(links$link_type==0)))), ]   -->
+
+<!-- for (x in 1:nrow(temp)) { -->
+<!--   links$link_type[links$row_num == temp$row_num[x]] <- 4 -->
+<!-- } -->
+<!-- ``` -->
+<!-- ```{r} -->
+
+<!-- #links$link_type[links$link_type == 1] <- 'Social Forum' -->
+<!-- links$link_type[links$link_type == 2] <- 'Acquaintance' -->
+<!-- links$link_type[links$link_type == 3] <- 'Video Platform' -->
+<!-- links$link_type[links$link_type == 4] <- 'Web Search' -->
+
+<!-- ``` -->
+
+```{r}
+#http://users.dimi.uniud.it/~massimo.franceschet/ns/syllabus/make/ggraph/ggraph.html
+# ### PLOT NETWORK 
+# # Type cast to tbl_graph object
+# social_net_tbls <- tbl_graph(nodes = nodes, 
+#                              edges = links, 
+#                              directed = FALSE)
+# 
+# # Create the network 
+# social_net <- ggraph(social_net_tbls, layout = "stress") +                                                                                                         
+#   geom_node_point(size = 2) +                                         
+#   geom_node_text(aes(label = name), nudge_y = 0.05, nudge_x = 0.2)+ 
+#   geom_edge_link(alpha = .25, 
+#                  aes(color = link_type )) + guides(color=guide_legend(title="Department")) +theme_void()
+# 
+# # Render the network 
+# show(social_net) 
+```
+
+
+```{r fig.height= 10, fig.width= 10}
+
+link_strength_c <- floor(runif(nrow(links), min=1, max=4))
+links$strength <- link_strength_c
+links$strength <- jitter(links$strength)
+```
+
+```{r fig.height= 10, fig.width= 10}
+library(igraph)
+package <- data.frame(
+  name = nodes$name,
+  p_type = nodes$p_type
+)
+
+for (x in 1:nrow(nodes)) {
+  
+  
+  links$src[links$src == nodes$pid[x]] <- nodes$name[x]
+  
+   links$target[links$target == nodes$pid[x]] <- nodes$name[x]
+  
+}
+
+tie <- links
+
+colnames(tie)[1] <- "from"
+colnames(tie)[2] <- "to"
+
+colnames(tie)[3] <- "Link"
+
+g = graph_from_data_frame(tie, directed = TRUE, vertices = package)
+
+# use arrows for directions
+ggraph(g, layout = 'graphopt') + 
+    geom_edge_link(aes(start_cap = label_rect(node1.name), end_cap = label_rect(node2.name), color = tie$strength), 
+                   arrow = arrow(type = "closed", length = unit(3, 'mm'))) + 
+    geom_node_text(aes(label = name, color = p_type)) +
+  theme_graph()
+
+```
+
+## Including Plots
+
+You can also embed plots, for example:
+
+```{r pressure, echo=FALSE}
+plot(pressure)
+```
+
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
